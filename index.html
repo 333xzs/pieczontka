@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Generator pieczątek IRS</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#080c14; --surface:#101726; --surface2:#151e31; --line:#22304a; --line2:#2d3d5c;
+  --text:#e9effc; --muted:#8c9ab8; --faint:#62708e;
+  --accent:#3b6dff; --accent2:#6b93ff; --accent-soft:rgba(59,109,255,.14);
+  --ok:#3ecf8e; --warn:#f0b955;
+  --paper:#fbfaf6; --ink:#12141a;
+  --r:16px;
+  --shadow:0 1px 0 rgba(255,255,255,.04) inset,0 14px 36px rgba(0,0,0,.32);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;min-height:100vh;color:var(--text);background:
+  radial-gradient(1100px 520px at 78% -8%,rgba(59,109,255,.20),transparent 62%),
+  radial-gradient(800px 420px at -6% 4%,rgba(20,65,165,.22),transparent 58%),var(--bg);
+  font:15px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+
+/* ---------- nagłówek ---------- */
+.top{max-width:1360px;margin:0 auto;padding:26px 28px 6px;display:flex;align-items:center;gap:16px}
+.mark{width:54px;height:54px;border-radius:14px;background:linear-gradient(145deg,#fff,#e8eefc);display:grid;place-items:center;box-shadow:0 6px 22px rgba(59,109,255,.35)}
+.mark img{width:36px;height:auto;display:block}
+.top h1{margin:0;font-size:25px;line-height:1.15;font-weight:750;letter-spacing:-.2px}
+.top p{margin:3px 0 0;color:var(--muted);font-size:14px}
+.tag{margin-left:auto;font-size:12px;font-weight:650;letter-spacing:.6px;text-transform:uppercase;color:var(--accent2);border:1px solid var(--line2);background:var(--accent-soft);padding:6px 11px;border-radius:999px;white-space:nowrap}
+
+/* ---------- układ ---------- */
+main{max-width:1360px;margin:18px auto 56px;padding:0 28px;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:22px;align-items:start}
+.left{position:sticky;top:20px;display:grid;gap:16px}
+.right{display:grid;gap:16px;min-width:0}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.028),transparent 120px),var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow);min-width:0}
+.card h2{margin:0 0 14px;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;letter-spacing:.1px}
+.card h2 .n{flex:none;width:24px;height:24px;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;display:grid;place-items:center;box-shadow:0 4px 12px rgba(59,109,255,.4)}
+.card h2 small{margin-left:auto;font-weight:500;font-size:12.5px;color:var(--muted);text-align:right}
+.card h2 small b{color:var(--text);font-weight:650}
+label.lbl{display:block;margin:14px 0 6px;font-size:12.5px;font-weight:600;color:var(--muted);letter-spacing:.2px}
+
+/* ---------- pola ---------- */
+.inp{width:100%;background:var(--surface2);border:1px solid var(--line);border-radius:11px;padding:11px 13px;outline:none;transition:border-color .15s,box-shadow .15s}
+.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.inp.big{font-size:19px;padding:13px 15px}
+select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%238c9ab8' stroke-width='2'%3E%3Cpath d='m1 1.5 5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:34px}
+button{cursor:pointer}
+button:focus-visible,.chip:has(input:focus-visible),.seg label:has(input:focus-visible){outline:2px solid var(--accent2);outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--surface2);border:1px solid var(--line2);border-radius:11px;padding:11px 16px;font-weight:600;transition:background .15s,border-color .15s,transform .05s}
+.btn:hover{background:#1b2640;border-color:#3b4e75}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:linear-gradient(180deg,#4a7bff,#3159e6);border-color:#4a7bff;color:#fff;box-shadow:0 8px 22px rgba(59,109,255,.38)}
+.btn.primary:hover{background:linear-gradient(180deg,#5a87ff,#3b66f0)}
+.btn svg{width:18px;height:18px;flex:none}
+
+/* ---------- stopnie ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.chip span{display:block;padding:9px 15px;border-radius:999px;border:1px solid var(--line2);background:var(--surface2);font-weight:600;font-size:14px;transition:all .15s;pointer-events:none}
+.chip:hover span{border-color:#41558080;background:#1a2540}
+.chip input:checked + span{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 6px 18px rgba(59,109,255,.4)}
+
+/* ---------- galeria czcionek ---------- */
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.search{position:relative;flex:1 1 180px;min-width:150px}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--faint);pointer-events:none}
+.search .inp{padding-left:36px}
+.cats{display:flex;gap:6px;flex-wrap:wrap}
+.cat{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--muted);transition:all .15s}
+.cat:hover{color:var(--text);border-color:var(--line2)}
+.cat[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:#fff}
+.gal-scroll{max-height:500px;overflow:auto;margin:0 -8px;padding:4px 8px 8px;scrollbar-width:thin;scrollbar-color:#31456b transparent}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.ft{position:relative;border-radius:13px;background:var(--paper);color:var(--ink);box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 4px 14px rgba(0,0,0,.25);transition:transform .15s,box-shadow .15s}
+.ft[hidden]{display:none}
+.ft:hover{transform:translateY(-2px);box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 10px 24px rgba(0,0,0,.35)}
+.ft .pick{display:block;width:100%;height:100%;text-align:left;background:none;border:2px solid transparent;border-radius:13px;padding:10px 13px 9px;color:inherit;min-height:92px}
+.ft .pick:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+.ft.on .pick{border-color:var(--accent);background:linear-gradient(180deg,#f3f6ff,#fbfaf6)}
+.ft-t{display:block;white-space:nowrap;overflow:hidden;line-height:1.55;min-height:46px;padding:3px 4px 5px 0;opacity:0;transition:opacity .25s}
+.ft.ready .ft-t{opacity:1}
+.ft-n{display:flex;align-items:center;gap:6px;margin-top:4px;font:600 11.5px/1.2 "Segoe UI",system-ui,sans-serif;color:#6a7285;letter-spacing:.2px}
+.ft.on .ft-n{color:var(--accent)}
+.tick{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;display:none;place-items:center}
+.ft.on .tick{display:grid}
+.tick svg{width:13px;height:13px}
+.ft .del{position:absolute;bottom:7px;right:7px;width:24px;height:24px;border-radius:7px;border:0;background:#eceef3;color:#59627a;font-size:13px;line-height:1;display:grid;place-items:center}
+.ft .del:hover{background:#ffd9d9;color:#b3261e}
+.up{display:grid;place-items:center;text-align:center;border:2px dashed var(--line2);background:transparent;color:var(--muted);box-shadow:none;min-height:92px;padding:10px;font-weight:600;font-size:13.5px;gap:2px;width:100%;border-radius:13px;transition:all .15s}
+.up:hover{border-color:var(--accent);color:var(--text);background:var(--accent-soft)}
+.up b{font-size:22px;line-height:1;color:var(--accent2)}
+.up small{font-weight:500;color:var(--faint)}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:26px 0}
+
+/* ---------- suwaki ---------- */
+.sliders{display:grid;grid-template-columns:1fr 1fr;gap:14px 22px}
+.sl label{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.sl label output{font-variant-numeric:tabular-nums;color:var(--text)}
+input[type=range]{width:100%;height:22px;margin:0;background:transparent;accent-color:var(--accent);cursor:pointer}
+.reset{margin-top:14px;background:none;border:0;color:var(--accent2);font-weight:600;font-size:13px;padding:2px 0}
+.reset:hover{text-decoration:underline}
+
+/* ---------- podgląd ---------- */
+.preview{padding:14px}
+.pv{border-radius:11px;overflow:hidden;line-height:0;background:#fff}
+.pv.checker{background-color:#fff;background-image:linear-gradient(45deg,#dcdfe6 25%,transparent 25%,transparent 75%,#dcdfe6 75%),linear-gradient(45deg,#dcdfe6 25%,transparent 25%,transparent 75%,#dcdfe6 75%);background-size:22px 22px;background-position:0 0,11px 11px}
+canvas{display:block;width:100%;height:auto}
+.exp{display:grid;gap:14px}
+.exp-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.exp .lbl{margin:0 0 6px}
+.seg{display:flex;border:1px solid var(--line2);border-radius:11px;overflow:hidden;background:var(--surface2)}
+.seg label{position:relative;flex:1;text-align:center;padding:10px 6px;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;border-left:1px solid var(--line);transition:all .15s}
+.seg label:first-child{border-left:0}
+.seg input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.seg label:has(input:checked){background:var(--accent-soft);color:#fff;box-shadow:inset 0 -2px 0 var(--accent)}
+.actions{display:grid;grid-template-columns:1.6fr 1fr;gap:10px}
+.actions .primary{padding:14px 16px;font-size:16px}
+.hint{margin:10px 0 0;font-size:12.5px;color:var(--faint)}
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:#0d2a20;border:1px solid #1f6b4b;color:#b8f2d8;padding:11px 18px;border-radius:12px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:all .22s;z-index:50;box-shadow:0 12px 30px rgba(0,0,0,.4)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+footer{max-width:1360px;margin:-30px auto 40px;padding:0 28px;color:var(--faint);font-size:12.5px}
+
+/* ---------- mobile / wąskie ---------- */
+@media(max-width:1020px){
+  main{display:flex;flex-direction:column;align-items:stretch;padding:0 16px;gap:14px}
+  .left{display:contents}
+  .preview{position:sticky;top:0;z-index:20;order:-2;margin:0 -4px;padding:10px;background:var(--surface);box-shadow:0 10px 26px rgba(0,0,0,.5)}
+  .preview .pv{max-width:480px;margin:0 auto}
+  .right{order:0}
+  .exp-card{order:5}
+  .top{padding:18px 16px 2px}.top h1{font-size:21px}.tag{display:none}
+  .sliders{grid-template-columns:1fr}
+  .gal-scroll{max-height:420px}
+  footer{padding:0 16px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="mark"><img id="markImg" alt="" width="36" height="32"></div>
+  <div>
+    <h1>Generator pieczątek</h1>
+    <p>Internal Revenue Service &middot; imię i nazwisko, stopień, własna czcionka podpisu</p>
+  </div>
+  <span class="tag">PNG z przezroczystym tłem</span>
+</header>
+
+<main>
+  <!-- ===== podgląd + eksport ===== -->
+  <section class="left" aria-label="Podgląd i pobieranie">
+    <div class="card preview">
+      <div class="pv checker" id="pv"><canvas id="view" width="1608" height="663" role="img" aria-label="Podgląd pieczątki"></canvas></div>
+    </div>
+
+    <div class="card exp-card">
+      <div class="exp">
+        <div>
+          <label class="lbl">Tło pliku</label>
+          <div class="seg" role="radiogroup" aria-label="Tło pliku">
+            <label><input type="radio" name="bg" value="transparent" checked>Przezroczyste</label>
+            <label><input type="radio" name="bg" value="white">Białe</label>
+          </div>
+        </div>
+        <p class="hint" style="margin:0">Rozmiar pliku: <b style="color:var(--text)">698 × 288 px</b> (PNG)</p>
+        <div class="actions">
+          <button type="button" class="btn primary" id="dl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 20h16"/></svg>Pobierz PNG</button>
+          <button type="button" class="btn" id="copy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>Kopiuj</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ustawienia ===== -->
+  <section class="right" aria-label="Ustawienia pieczątki">
+    <div class="card">
+      <h2><span class="n">1</span>Stopień</h2>
+      <div class="chips" id="ranks" role="radiogroup" aria-label="Stopień"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">2</span>Imię i nazwisko</h2>
+      <input class="inp big" type="text" id="name" value="Imie Nazwisko" placeholder="np. Jan Kowalski" autocomplete="off" spellcheck="false" aria-label="Imię i nazwisko">
+    </div>
+
+    <div class="card">
+      <h2><span class="n">3</span>Czcionka podpisu <small>Wybrana: <b id="fontName">–</b></small></h2>
+      <div class="tools">
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input class="inp" type="search" id="q" placeholder="Szukaj czcionki…" autocomplete="off" aria-label="Szukaj czcionki">
+        </div>
+        <div class="cats" id="cats" role="group" aria-label="Kategoria czcionek"></div>
+      </div>
+      <div class="gal-scroll" id="galScroll"><div class="gal" id="gal" role="group" aria-label="Czcionki"></div></div>
+      <input type="file" id="fontFile" accept=".ttf,.otf,.woff,.woff2" hidden>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">4</span>Dopasowanie podpisu</h2>
+      <div class="sliders">
+        <div class="sl"><label for="size">Rozmiar <output id="sizeO"></output></label><input type="range" id="size" min="40" max="170" step="1" value="100"></div>
+        <div class="sl"><label for="bold">Grubość kreski <output id="boldO"></output></label><input type="range" id="bold" min="0" max="6" step="0.1" value="0"></div>
+        <div class="sl"><label for="dx">W lewo / w prawo <output id="dxO"></output></label><input type="range" id="dx" min="-250" max="250" step="1" value="0"></div>
+        <div class="sl"><label for="dy">W górę / w dół <output id="dyO"></output></label><input type="range" id="dy" min="-120" max="120" step="1" value="0"></div>
+        <div class="sl"><label for="rot">Obrót <output id="rotO"></output></label><input type="range" id="rot" min="-15" max="15" step="0.5" value="0"></div>
+      </div>
+      <button type="button" class="reset" id="resetAdj">Resetuj dopasowanie</button>
+    </div>
+  </section>
+</main>
+<footer>Czcionki podpisów: Google Fonts (licencja OFL). Układ pieczątki odwzorowany 1:1 z oryginału; plik PNG: 698 × 288 px.</footer>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="logo.js"></script>
+<script>
+/* ============ KONFIGURACJA ============ */
+// Stopnie: label = przycisk, text = linia pod tytułem. Czcionka NIE jest przypisana do stopnia.
+const RANKS = [
+  { id:'dyrektor',  label:'Dyrektor',           text:'Dyrektor Internal Revenue Service' },
+  { id:'zastepca',  label:'Zastępca Dyrektora', text:'Zastępca Dyrektora Internal Revenue Service' },
+  { id:'starszy',   label:'Starszy Inspektor',  text:'Starszy Inspektor Internal Revenue Service' },
+  { id:'inspektor', label:'Inspektor',          text:'Inspektor Internal Revenue Service' },
+  { id:'mlodszy',   label:'Młodszy Inspektor',  text:'Młodszy Inspektor Internal Revenue Service' },
+];
+const DEFAULT_FONT = 'Whisper';           // tylko przy pierwszym wejściu; potem strona pamięta Twój wybór
+const CATS = [['all','Wszystkie'],['sig','Podpis'],['cal','Kaligrafia'],['brush','Pędzel'],['hand','Odręczne'],['mine','Moje']];
+// [plik w fonts/ bez .ttf, nazwa, kategoria]
+const FONTS = [
+  ['HerrVonMuellerhoff','Herr Von Muellerhoff','sig'],['MrsSaintDelafield','Mrs Saint Delafield','sig'],['MonsieurLaDoulaise','Monsieur La Doulaise','sig'],
+  ['MrDeHaviland','Mr De Haviland','sig'],['Whisper','Whisper','sig'],['Hurricane','Hurricane','sig'],['Meddon','Meddon','sig'],['Qwigley','Qwigley','sig'],
+  ['Allison','Allison','sig'],['Updock','Updock','sig'],['Estonia','Estonia','sig'],['Fuggles','Fuggles','sig'],['Waterfall','Waterfall','sig'],
+  ['TheNautigal','The Nautigal','sig'],['Comforter','Comforter','sig'],['Explora','Explora','sig'],['Ole','Ole','sig'],['Ephesis','Ephesis','sig'],
+  ['GreatVibes','Great Vibes','cal'],['Allura','Allura','cal'],['AlexBrush','Alex Brush','cal'],['Parisienne','Parisienne','cal'],['PinyonScript','Pinyon Script','cal'],
+  ['Italianno','Italianno','cal'],['PetitFormalScript','Petit Formal Script','cal'],['Arizonia','Arizonia','cal'],['Carattere','Carattere','cal'],['Ballet','Ballet','cal'],
+  ['Sacramento','Sacramento','cal'],['Tangerine','Tangerine','cal'],['ImperialScript','Imperial Script','cal'],['Gwendolyn','Gwendolyn','cal'],['Babylonica','Babylonica','cal'],
+  ['IslandMoments','Island Moments','cal'],['WindSong','WindSong','cal'],['Birthstone','Birthstone','cal'],
+  ['Yellowtail','Yellowtail','brush'],['MrDafoe','Mr Dafoe','brush'],['KaushanScript','Kaushan Script','brush'],['MarckScript','Marck Script','brush'],['Kristi','Kristi','brush'],
+  ['WaterBrush','Water Brush','brush'],['VujahdayScript','Vujahday Script','brush'],['Splash','Splash','brush'],['Praise','Praise','brush'],['Satisfy','Satisfy','brush'],
+  ['Cookie','Cookie','brush'],['Courgette','Courgette','brush'],
+  ['Zeyada','Zeyada','hand'],['SquarePeg','Square Peg','hand'],['ReenieBeanie','Reenie Beanie','hand'],['LaBelleAurore','La Belle Aurore','hand'],['Caveat','Caveat','hand'],
+  ['DancingScript','Dancing Script','hand'],['Mynerve','Mynerve','hand'],['HomemadeApple','Homemade Apple','hand'],['Mansalva','Mansalva','hand'],['OvertheRainbow','Over the Rainbow','hand'],
+  ['CedarvilleCursive','Cedarville Cursive','hand'],['NothingYouCouldDo','Nothing You Could Do','hand'],['DawningofaNewDay','Dawning of a New Day','hand'],['LovedbytheKing','Loved by the King','hand'],
+];
+
+/* ============ STAŁE UKŁADU 1:1 (zmierzone na oryginale 1608×669) ============ */
+const W = 1608, H = 669;                 // układ źródłowy (oryginał)
+const OUT = { w:698, h:288 };            // jedyny rozmiar pliku PNG (skala równomierna, dół kadru przycięty z pustego marginesu)
+const BLUE = '#1441A5';
+const LOGO = { x:39, y:63, w:576, h:517 };
+const TITLE = { text:'Internal Revenue Service', left:662, width:909.5, bottom:240 };
+const RANK_LINE = { sample:'Dyrektor Internal Revenue Service', width:649, cx:1117.5, baseline:298, maxW:915 };
+const SIG = { w:700, maxH:170, cx:1120, cy:392 };      // domyślna szerokość/wysokość i środek podpisu
+const MAX_SIG_W = 900;
+const SAMPLE = 'Imie Nazwisko';
+const SANS = 'Arial, "Arimo", Helvetica, sans-serif';  // oryginał jest w Arialu; Arimo (fonts/) to zapas dla systemów bez Ariala
+
+/* ============ STAN ============ */
+const $ = id => document.getElementById(id);
+const store = {
+  get(){ try{ return JSON.parse(localStorage.getItem('irs-stamp-v2')||'{}'); }catch{ return {}; } },
+  set(o){ try{ localStorage.setItem('irs-stamp-v2', JSON.stringify(o)); }catch{} }
+};
+const saved = store.get();
+const state = {
+  rankId: RANKS.some(r=>r.id===saved.rankId) ? saved.rankId : RANKS[0].id,
+  name: 'Imie Nazwisko', font: saved.font || DEFAULT_FONT,
+  sizePct: saved.sizePct ?? 100, dx: saved.dx ?? 0, dy: saved.dy ?? 0, rot: saved.rot ?? 0, bold: saved.bold ?? 0,
+  bg: saved.bg==='white' ? 'white' : 'transparent',
+};
+const rank = () => RANKS.find(r=>r.id===state.rankId);
+function persist(){
+  store.set({ rankId:state.rankId, font:state.font, sizePct:state.sizePct, dx:state.dx, dy:state.dy, rot:state.rot, bold:state.bold, bg:state.bg });
+}
+
+/* ============ CZCIONKI ============ */
+const known = new Set(FONTS.map(f=>f[0]));
+const customFonts = [];                                  // {family, label}
+(function injectFontFaces(){
+  let css = '@font-face{font-family:"Arimo";font-weight:700;src:url(fonts/Arimo.ttf) format("truetype")}';
+  for(const [file] of FONTS) css += `@font-face{font-family:"${file}";src:url(fonts/${file}.ttf) format("truetype");font-display:swap}`;
+  const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+})();
+const ensureFont = async (family, bold) => { try{ await document.fonts.load(`${bold?'700 ':''}100px "${family}"`, 'Aąłz'); }catch{} };
+const labelOf = fam => (FONTS.find(f=>f[0]===fam)||[])[1] || (customFonts.find(c=>c.family===fam)||{}).label || fam;
+
+const mctx = document.createElement('canvas').getContext('2d');
+function ink(fontCss, text){
+  mctx.font = fontCss; mctx.textAlign = 'left'; mctx.textBaseline = 'alphabetic';
+  const m = mctx.measureText(text);
+  return { l:m.actualBoundingBoxLeft, r:m.actualBoundingBoxRight, a:m.actualBoundingBoxAscent, d:m.actualBoundingBoxDescent, w:m.actualBoundingBoxLeft+m.actualBoundingBoxRight };
+}
+const sigFont = (fam,size) => `${size}px "${fam}", cursive`;
+const sansFont = size => `700 ${size}px ${SANS}`;
+
+// czy czcionka ma dany znak? (porównanie szerokości z dwiema różnymi czcionkami zapasowymi)
+function hasGlyph(fam, ch){
+  mctx.font = `100px "${fam}", serif`;     const a = mctx.measureText(ch).width;
+  mctx.font = `100px "${fam}", monospace`; const b = mctx.measureText(ch).width;
+  return Math.abs(a-b) < 0.01;
+}
+const PL = { 'ą':'a','ć':'c','ę':'e','ł':'l','ń':'n','ó':'o','ś':'s','ź':'z','ż':'z','Ą':'A','Ć':'C','Ę':'E','Ł':'L','Ń':'N','Ó':'O','Ś':'S','Ź':'Z','Ż':'Z' };
+function prepare(text, fam){
+  const missing = []; let out = '';
+  for(const ch of text){
+    if(PL[ch] && !hasGlyph(fam, ch)){ missing.push(ch); out += PL[ch]; }
+    else out += ch;
+  }
+  return { text: out, missing: [...new Set(missing)] };
+}
+
+// rozmiar czcionki, przy którym "Imie Nazwisko" mieści się w polu podpisu (szerokość i wysokość)
+const calCache = new Map();
+function calibrate(fam){
+  if(calCache.has(fam)) return calCache.get(fam);
+  const m = ink(sigFont(fam,200), SAMPLE);
+  const size = Math.min(200*SIG.w/m.w, 200*SIG.maxH/(m.a+m.d));
+  calCache.set(fam, size);
+  return size;
+}
+
+/* ============ RYSOWANIE ============ */
+const logoImg = new Image();
+const logoReady = new Promise(res => { logoImg.onload = res; logoImg.onerror = res; });   // (decode() zawiesza się w kartach w tle)
+logoImg.src = LOGO_DATA_URI;
+$('markImg').src = LOGO_DATA_URI;
+
+function paint(ctx, scale){
+  ctx.save();
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.setTransform(scale,0,0,scale,0,0);
+  if(state.bg === 'white'){ ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H); }
+
+  ctx.drawImage(logoImg, LOGO.x, LOGO.y, LOGO.w, LOGO.h);
+
+  // tytuł
+  const tSize = 200*TITLE.width/ink(sansFont(200), TITLE.text).w;
+  const tm = ink(sansFont(tSize), TITLE.text);
+  ctx.font = sansFont(tSize); ctx.fillStyle = BLUE; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  ctx.fillText(TITLE.text, TITLE.left + tm.l, TITLE.bottom - tm.d);
+
+  // linia ze stopniem (stały rozmiar, wyśrodkowana)
+  let rs = 200*RANK_LINE.width/ink(sansFont(200), RANK_LINE.sample).w;
+  const rText = rank().text;
+  let rm = ink(sansFont(rs), rText);
+  if(rm.w > RANK_LINE.maxW){ rs *= RANK_LINE.maxW/rm.w; rm = ink(sansFont(rs), rText); }
+  ctx.font = sansFont(rs); ctx.fillStyle = '#000';
+  ctx.fillText(rText, RANK_LINE.cx + (rm.l-rm.r)/2, RANK_LINE.baseline);
+
+  // podpis
+  const fam = state.font;
+  const prep = prepare(state.name.trim(), fam);
+  if(prep.text){
+    let size = calibrate(fam) * state.sizePct/100;
+    let m = ink(sigFont(fam,size), prep.text);
+    if(m.w > MAX_SIG_W){ size *= MAX_SIG_W/m.w; m = ink(sigFont(fam,size), prep.text); }
+    const ph = ink(sigFont(fam,size), SAMPLE);                 // stała linia bazowa (nie skacze zależnie od liter)
+    ctx.save();
+    ctx.translate(SIG.cx + state.dx, SIG.cy + state.dy);
+    ctx.rotate(state.rot*Math.PI/180);
+    ctx.font = sigFont(fam,size); ctx.fillStyle = '#000';
+    const tx = (m.l-m.r)/2, ty = (ph.a-ph.d)/2;
+    ctx.fillText(prep.text, tx, ty);
+    if(state.bold > 0){ ctx.lineWidth = state.bold; ctx.lineJoin = 'round'; ctx.strokeStyle = '#000'; ctx.strokeText(prep.text, tx, ty); }
+    ctx.restore();
+  }
+  ctx.restore();
+  return prep.missing;
+}
+
+const view = $('view'), vctx = view.getContext('2d');
+let token = 0;
+async function refresh(){
+  const t = ++token;
+  await Promise.all([logoReady, ensureFont('Arimo', true), ensureFont(state.font)]);
+  if(t !== token) return;
+  vctx.clearRect(0,0,view.width,view.height);
+  paint(vctx, view.width/W);
+}
+
+/* ============ GALERIA CZCIONEK ============ */
+const TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+const tiles = new Map();                                 // family -> {el, tEl, btn, size, loaded}
+let activeCat = 'all', query = '';
+const gal = $('gal'), galScroll = $('galScroll');
+const io = new IntersectionObserver(es => { for(const e of es) if(e.isIntersecting){ io.unobserve(e.target); loadTile(e.target.dataset.fam); } }, { root:galScroll, rootMargin:'320px' });
+
+function makeUploadTile(){
+  const w = document.createElement('div'); w.className = 'ft-up'; w.id = 'upTile';
+  w.innerHTML = '<button type="button" class="up"><b>+</b>Wgraj własną czcionkę<small>.ttf / .otf / .woff</small></button>';
+  w.querySelector('button').addEventListener('click', () => $('fontFile').click());
+  return w;
+}
+function addTile(fam, label, cat, custom){
+  if(tiles.has(fam)) return;
+  const el = document.createElement('div'); el.className = 'ft'; el.dataset.fam = fam; el.dataset.cat = custom ? 'mine' : cat; el.dataset.label = label.toLowerCase();
+  el.innerHTML = '<button type="button" class="pick" aria-pressed="false"><span class="ft-t"></span><span class="ft-n"><span class="nm"></span></span></button><span class="tick">'+TICK+'</span>';
+  const t = { el, tEl:el.querySelector('.ft-t'), btn:el.querySelector('.pick'), size:30, loaded:false };
+  el.querySelector('.nm').textContent = label;
+  t.tEl.style.fontFamily = `"${fam}", cursive`;
+  t.tEl.textContent = state.name.trim() || SAMPLE;
+  t.btn.addEventListener('click', () => chooseFont(fam));
+  if(custom){
+    const d = document.createElement('button'); d.type = 'button'; d.className = 'del'; d.title = 'Usuń tę czcionkę'; d.setAttribute('aria-label','Usuń czcionkę '+label); d.textContent = '✕';
+    d.addEventListener('click', e => { e.stopPropagation(); removeCustom(fam); });
+    el.appendChild(d);
+  }
+  tiles.set(fam, t);
+  gal.appendChild(el);
+  io.observe(el);
+  if(custom) loadTile(fam);
+}
+async function loadTile(fam){
+  const t = tiles.get(fam); if(!t || t.loaded) return;
+  await ensureFont(fam);
+  t.size = Math.max(20, Math.min(48, 100*172/ink(sigFont(fam,100), SAMPLE).w));
+  t.loaded = true;
+  updateTile(t, fam);
+  t.el.classList.add('ready');
+}
+function updateTile(t, fam){
+  const raw = state.name.trim() || SAMPLE;
+  t.tEl.textContent = t.loaded ? prepare(raw, fam).text : raw;
+  t.tEl.style.fontSize = t.size + 'px';
+  if(t.loaded && t.tEl.clientWidth){
+    const over = t.tEl.scrollWidth / t.tEl.clientWidth;
+    if(over > 1) t.tEl.style.fontSize = (t.size/over*0.96) + 'px';
+  }
+}
+let tileTimer = 0;
+function updateAllTiles(){
+  clearTimeout(tileTimer);
+  tileTimer = setTimeout(() => { for(const [fam,t] of tiles) if(t.loaded && !t.el.hidden) updateTile(t, fam); }, 40);
+}
+function filterTiles(){
+  const q = query.trim().toLowerCase(); let shown = 0;
+  for(const t of tiles.values()){
+    const ok = (activeCat==='all' || t.el.dataset.cat===activeCat) && (!q || t.el.dataset.label.includes(q));
+    t.el.hidden = !ok; if(ok) shown++;
+  }
+  const up = $('upTile'); if(up) up.hidden = !(activeCat==='all' || activeCat==='mine') || !!q;
+  let em = $('emptyMsg');
+  if(!shown){ if(!em){ em = document.createElement('div'); em.id = 'emptyMsg'; em.className = 'empty'; gal.appendChild(em); } em.textContent = activeCat==='mine' && !q ? 'Nie wgrano jeszcze własnych czcionek.' : 'Brak czcionek pasujących do wyszukiwania.'; }
+  else if(em) em.remove();
+  updateAllTiles();
+}
+function markSelected(){
+  for(const [fam,t] of tiles){ const on = fam === state.font; t.el.classList.toggle('on', on); t.btn.setAttribute('aria-pressed', on); }
+  $('fontName').textContent = labelOf(state.font);
+}
+function chooseFont(fam){
+  state.font = fam; markSelected(); persist(); refresh();
+}
+function buildCats(){
+  const box = $('cats'); box.textContent = '';
+  for(const [id,label] of CATS){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'cat'; b.textContent = label; b.setAttribute('aria-pressed', id===activeCat);
+    b.addEventListener('click', () => { activeCat = id; for(const x of box.children) x.setAttribute('aria-pressed', x===b); filterTiles(); galScroll.scrollTop = 0; });
+    box.appendChild(b);
+  }
+}
+
+/* ---- własne czcionki (zapamiętane w przeglądarce, IndexedDB) ---- */
+const idb = {
+  open(){ return new Promise((res,rej)=>{ const r = indexedDB.open('irs-stamp-fonts',1); r.onupgradeneeded = () => r.result.createObjectStore('f',{keyPath:'family'}); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async all(){ const db = await this.open(); return new Promise((res,rej)=>{ const q = db.transaction('f').objectStore('f').getAll(); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
+  async put(rec){ const db = await this.open(); return new Promise((res,rej)=>{ const t = db.transaction('f','readwrite'); t.objectStore('f').put(rec); t.oncomplete = res; t.onerror = () => rej(t.error); }); },
+  async del(key){ const db = await this.open(); return new Promise((res,rej)=>{ const t = db.transaction('f','readwrite'); t.objectStore('f').delete(key); t.oncomplete = res; t.onerror = () => rej(t.error); }); },
+};
+async function registerCustom(family, label, buf){
+  const ff = new FontFace(family, buf); await ff.load(); document.fonts.add(ff);
+  if(!customFonts.some(c=>c.family===family)) customFonts.push({family, label});
+}
+$('fontFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if(!f) return;
+  const label = f.name.replace(/\.[^.]+$/,'');
+  const family = 'USR_' + label.replace(/[^\w]+/g,'_');
+  try{
+    const buf = await f.arrayBuffer();
+    await registerCustom(family, label, buf.slice(0));
+    try{ await idb.put({family, label, buf}); }catch{}
+    calCache.delete(family);
+    if(!tiles.has(family)) addTile(family, label, 'mine', true);
+    activeCat = 'mine'; buildCats(); query = ''; $('q').value = ''; filterTiles();
+    chooseFont(family); await loadTile(family);
+    tiles.get(family)?.el.scrollIntoView({block:'nearest'});
+    toast(`Dodano czcionkę: ${label}`);
+  }catch{ toast('Nie udało się wczytać tej czcionki'); }
+});
+async function removeCustom(fam){
+  try{ await idb.del(fam); }catch{}
+  const i = customFonts.findIndex(c=>c.family===fam); if(i>=0) customFonts.splice(i,1);
+  tiles.get(fam)?.el.remove(); tiles.delete(fam);
+  if(state.font === fam){ state.font = DEFAULT_FONT; persist(); refresh(); }
+  markSelected(); filterTiles();
+}
+
+/* ============ UI ============ */
+function buildRanks(){
+  const box = $('ranks'); box.textContent = '';
+  for(const r of RANKS){
+    const l = document.createElement('label'); l.className = 'chip';
+    l.innerHTML = '<input type="radio" name="rank"><span></span>';
+    const i = l.querySelector('input'); i.value = r.id; i.checked = r.id === state.rankId;
+    l.querySelector('span').textContent = r.label;
+    i.addEventListener('change', () => { state.rankId = r.id; persist(); refresh(); });
+    box.appendChild(l);
+  }
+}
+function syncSliders(){
+  $('size').value = state.sizePct; $('dx').value = state.dx; $('dy').value = state.dy; $('rot').value = state.rot; $('bold').value = state.bold;
+  $('sizeO').textContent = state.sizePct+'%'; $('dxO').textContent = state.dx; $('dyO').textContent = state.dy; $('rotO').textContent = state.rot+'°'; $('boldO').textContent = state.bold;
+}
+$('name').addEventListener('input', e => { state.name = e.target.value; updateAllTiles(); refresh(); });
+$('q').addEventListener('input', e => { query = e.target.value; filterTiles(); });
+for(const [id,key,fmt] of [['size','sizePct',v=>v+'%'],['dx','dx',v=>v],['dy','dy',v=>v],['rot','rot',v=>v+'°'],['bold','bold',v=>v]]){
+  $(id).addEventListener('input', e => { state[key] = +e.target.value; $(id+'O').textContent = fmt(state[key]); persist(); refresh(); });
+}
+$('resetAdj').addEventListener('click', () => { Object.assign(state, {sizePct:100, dx:0, dy:0, rot:0, bold:0}); syncSliders(); persist(); refresh(); });
+document.querySelectorAll('input[name=bg]').forEach(i => { i.checked = i.value === state.bg; i.addEventListener('change', () => { state.bg = i.value; persist(); }); });
+
+/* ---- eksport ---- */
+const slug = s => (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ł/gi,'l').replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'').toLowerCase();
+async function renderBlob(){
+  await Promise.all([logoReady, ensureFont('Arimo', true), ensureFont(state.font)]);
+  const c = document.createElement('canvas');
+  c.width = OUT.w; c.height = OUT.h;
+  paint(c.getContext('2d'), OUT.w/W);
+  return new Promise(res => c.toBlob(res, 'image/png'));
+}
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(()=>t.classList.remove('show'), 2200); }
+$('dl').addEventListener('click', async () => {
+  const blob = await renderBlob();
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `pieczatka_${slug(state.name)||'podpis'}_${slug(rank().label)}.png`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  toast('Pobrano PNG');
+});
+$('copy').addEventListener('click', async () => {
+  try{ const blob = await renderBlob(); await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); toast('Skopiowano do schowka'); }
+  catch{ toast('Schowek niedostępny — użyj „Pobierz PNG”'); }
+});
+
+/* ---- start ---- */
+(async function init(){
+  try{ for(const r of await idb.all()) await registerCustom(r.family, r.label, r.buf.slice(0)); }catch{}
+  buildRanks(); syncSliders(); buildCats();
+  gal.appendChild(makeUploadTile());
+  for(const [f,l,c] of FONTS) addTile(f, l, c, false);
+  for(const c of customFonts) addTile(c.family, c.label, 'mine', true);
+  if(!tiles.has(state.font)) state.font = DEFAULT_FONT;
+  markSelected(); filterTiles();
+  const sel = tiles.get(state.font); if(sel) galScroll.scrollTop = Math.max(0, sel.el.offsetTop - galScroll.offsetTop - 70);
+  refresh();
+  if(matchMedia('(pointer:fine)').matches){ $('name').focus(); $('name').select(); }
+})();
+</script>
+</body>
+</html>
